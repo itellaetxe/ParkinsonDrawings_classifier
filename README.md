@@ -1,6 +1,7 @@
 # ParkinsonDrawings_classifier
 Parkinson spiral and wave drawing image analysis and classification using ML and DL. Class miniproject
 
+Planned features:
 -mean pressure
 -std pressure
 -num of pixels to follow path
