@@ -16,19 +16,15 @@ LUT(combs) = 1;
 
 % Apply this to image subregions
 [m, n] = size(element(:,:,1));
-out_im = zeros(m, n);
 m = floor(m/2);
 n = floor(n/2);
 [M, N] = size(image);
+out_im = zeros(M, N);
 
 for i = (1+m):(M-m)
     for c = (1+n):(N-n)
         V = sum(sum(image(i-m:i+m, c-n:c+n) .* vals));
-        if V == 0
-            out_im(i,c) = LUT(V + 1);
-        else
-            out_im(i,c) = LUT(V + 1);
-        end
+        out_im(i,c) = LUT(V + 1);
     end
 end
 
