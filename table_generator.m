@@ -6,28 +6,28 @@ clear;
 close all;
 
 %% LOADING AND ORGANIZING SPIRAL DRAWINGS
-imagefiles_spiral_healthy = dir("./data/spiral/training/healthy/*.png");
+imagefiles_spiral_healthy = [dir("./synth_spirals/training/healthy/.png"); dir("./synth_spirals/training/healthy/.jpeg")];
 n_spiral_healthy = length(imagefiles_spiral_healthy);
 
 img_spiral_healthy = cell(n_spiral_healthy, 1);
 subject_names_healthy_spiral = string(zeros(n_spiral_healthy, 1));
 for img = 1:n_spiral_healthy
     curr = imagefiles_spiral_healthy(img).name;
-    curr_img = imread("./data/spiral/training/healthy/" + string(curr));
+    curr_img = imread("./synth_spirals/training/healthy/" + string(curr));
 
     curr_img = im2double(rgb2gray(curr_img));
     img_spiral_healthy{img} = curr_img;
     subject_names_healthy_spiral(img) = erase(imagefiles_spiral_healthy(img).name, [".png", ".jpeg"]);
 end
 
-imagefiles_spiral_parkinson = dir("./data/spiral/training/parkinson/*.png");
+imagefiles_spiral_parkinson = [dir("./synth_spirals/training/parkinson/.png"); dir("./synth_spirals/training/parkinson/.jpeg")];
 n_spiral_parkinson = length(imagefiles_spiral_parkinson);
 
 img_spiral_parkinson = cell(n_spiral_parkinson, 1);
 subject_names_parkinson_spiral = string(zeros(n_spiral_healthy, 1));
 for img = 1:n_spiral_parkinson
     curr = imagefiles_spiral_parkinson(img).name;
-    curr_img = imread("./data/spiral/training/parkinson/" + string(curr));
+    curr_img = imread("./synth_spirals/training/parkinson/" + string(curr));
 
     curr_img = im2double(rgb2gray(curr_img));
     img_spiral_parkinson{img} = curr_img;
