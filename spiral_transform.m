@@ -119,20 +119,15 @@ contourSig = sqrt((X_pts-centroid.Centroid(1)).^2 + ...
 spec = fft(contourSig, length(contourSig));
 half = round(length(spec) / 2);
 spec = spec(1:half);
-spec = abs(spec);
+spec = abs(spec).^2;
 % Ratio of high frequency power accounting for fast varying coordinates, tremor of
 % the hand, respect to whole spectrum.
-th = ceil(length(spec) / 100); % th is at 1% of the spectrum bandwith.
-if th == 1; th = 2; end
+th = ceil(length(spec) / 4); % th is at 25% of Fs/2 (maximum freq in the spectrum).
+% Sometimes contoursignature is so small this can happen.
+% The algorithm is not perfect always capturing very long spiral segments.
+if th == 1; th = 2; end 
+% High Frequency Power --> Feature
 HFP = sum(spec(th:end)) / sum(spec);
-
-% % New feature: distance from centroid of figure spiral's inner endpoint. If
-% % the spiral is properly drawn, this should be minimized. If not, it gets
-% % bigger. (Hypothesis!). Let's call it IECD
-% % (inner-endpoint-centroid-distance) %%% NEEDS TO BE DISCUSSED!
-% IECD = sqrt((centroid.Centroid(1)-X_init).^2 + (centroid.Centroid(2)-Y_init).^2);
-
-
 % Rangayyan's ff number just in case it turns out to be supa good.
 ff = fourier_descriptors(X_pts, Y_pts);
 end

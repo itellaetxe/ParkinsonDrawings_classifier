@@ -6,7 +6,7 @@ clear;
 close all;
 
 %% LOADING AND ORGANIZING SPIRAL DRAWINGS
-imagefiles_spiral_healthy = [dir("./synth_spirals/training/healthy/.png"); dir("./synth_spirals/training/healthy/.jpeg")];
+imagefiles_spiral_healthy = [dir("./synth_spirals/training/healthy/*.png"); dir("./synth_spirals/training/healthy/*.jpeg")];
 n_spiral_healthy = length(imagefiles_spiral_healthy);
 
 img_spiral_healthy = cell(n_spiral_healthy, 1);
@@ -20,7 +20,8 @@ for img = 1:n_spiral_healthy
     subject_names_healthy_spiral(img) = erase(imagefiles_spiral_healthy(img).name, [".png", ".jpeg"]);
 end
 
-imagefiles_spiral_parkinson = [dir("./synth_spirals/training/parkinson/.png"); dir("./synth_spirals/training/parkinson/.jpeg")];
+imagefiles_spiral_parkinson = [dir("./synth_spirals/training/parkinson/*.png"); ...
+    dir("./synth_spirals/training/parkinson/*.jpeg")];
 n_spiral_parkinson = length(imagefiles_spiral_parkinson);
 
 img_spiral_parkinson = cell(n_spiral_parkinson, 1);
