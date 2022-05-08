@@ -99,6 +99,7 @@ ACC = (TN+TP)/(TP+TN+FP+FN);
 scores = scores(:,2); % second column corresponds to PD probability
 [X, Y, T, AUC] = perfcurve(YValidation == "pd", scores, 1);
 
+xx = X; yy = Y; au = AUC;
 % figure; 
 % title("Receiver Operating curve for AlexNet on augmented dataset")
 % plot(X,Y, 'LineWidth', 2, 'Color', 'r');
