@@ -1,0 +1,293 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+MODEL BUILDING FOR THE FINAL PROJECT 
+
+Load datasets
+```{r}
+pathname <- "/home/teitxe/Documents/DATA_LAB" # Do NOT forget the "/" at the beginning...
+
+p1 <- "/prepro_df_nocorr.csv"
+p2 <- "/prepro_df_PCA.csv"
+p3 <- "/prepro_df_RFE.csv"
+
+df_nc <- read.csv(paste(pathname, p1, sep=""), header=TRUE)
+df_nc$Subject_spiral <- as.factor(df_nc$Subject_spiral)
+df_nc$Label <- as.factor(df_nc$Label)
+
+df_pca <- read.csv(paste(pathname, p2, sep=""), header=TRUE)
+df_pca$Subject_spiral <- as.factor(df_pca$Subject_spiral)
+df_pca$Label <- as.factor(df_pca$Label)
+
+df_rfe <- read.csv(paste(pathname, p3, sep=""), header=TRUE)
+df_rfe$Subject_spiral <- as.factor(df_rfe$Subject_spiral)
+df_rfe$Label <- as.factor(df_rfe$Label)
+
+levels(df_nc$Label) <- c("H", "PD")
+levels(df_pca$Label) <- c("H", "PD")
+levels(df_rfe$Label) <- c("H", "PD")
+```
+
+```{r LOAD ALL NECESSARY LIBRARIES}
+library(caret)
+library(mlbench)
+library(MASS)
+library(e1071)
+library(klaR)
+```
+
+Validation/Test set (NO synthetic images !!!)
+```{r}
+orig_ims <- df_nc[!grepl("NC", df_nc$Subject_spiral), ]
+
+# Make split for TESTING in original images. We take 26 original images. 13+, 13-
+validation_idx <- createDataPartition(orig_ims$Label, p=0.30, list=FALSE)
+
+# Remove these images from the training datasets
+subj_rm <- orig_ims[validation_idx,]$Subject_spiral # original spiral subjects to remove from training
+df_nc <- subset(df_nc, ! Subject_spiral %in% subj_rm,)
+df_pca <- subset(df_pca, ! Subject_spiral %in% subj_rm,)
+df_rfe <- subset(df_rfe, ! Subject_spiral %in% subj_rm,)
+
+# Predict on orig_ims with validation_idx !!!!!!!!!!!!!
+```
+
+Cross validation
+```{r}
+train_control <- trainControl(method="cv", number=10,
+                              classProbs=TRUE,
+                              summaryFunction=twoClassSummary)
+```
+
+Testing evaluation function:
+
+```{r}
+test_perf <- function(model, data, validation_idx) {
+  
+  pred_label <- round(predict(model, newdata = data[validation_idx,], type = "prob"))
+  gt_label <- as.factor(orig_ims[validation_idx, ncol(data)])
+  levels(gt_label) <- c(0,1)
+  
+  TP <- sum(pred_label[11:20,2])
+  TN <- sum(pred_label[1:10,1])
+  FP <- sum(pred_label[1:10,2])
+  FN <- sum(pred_label[11:20,1])
+  
+  Se <- TP / (TP+FN)
+  Sp <- TN / (TN+FP)
+  Acc <- (TP+TN) / (TP+FN+TN+FP)
+  
+  return(c(Se, Sp, Acc))
+}
+```
+
+
+Train models
+```{r ALL MODELS, df_nc DATASET}
+# LDA
+nc.LDA <- caret::train(Label~.-Subject_spiral, data=df_nc, method="lda", metric="ROC"
+                 , trControl=train_control)
+# QDA
+nc.QDA <- caret::train(Label~.-Subject_spiral, data=df_nc, method="qda", metric="ROC"
+                 , trControl=train_control)
+# Logistic Regression
+nc.glm <- caret::train(Label~.-Subject_spiral, data=df_nc, method="glm", metric="ROC"
+                 , trControl=train_control)
+# kNN
+nc.kNN <- caret::train(Label~.-Subject_spiral, data=df_nc, method="knn", metric="ROC"
+                 , trControl=train_control)
+# Naive Bayes
+nc.NB <- caret::train(Label~.-Subject_spiral, data=df_nc, method="naive_bayes", metric="ROC"
+                 , trControl=train_control)
+# Radial SVM
+nc.RSVM <- caret::train(Label~.-Subject_spiral, data=df_nc, method="svmRadial", metric="ROC"
+                 , trControl=train_control)
+# Multilayer Perceptron
+library(RSNNS)
+nc.MLP <- caret::train(Label~.-Subject_spiral, data=df_nc, method="mlp", metric="ROC"
+                          , trControl=train_control)
+
+# Random Forest
+nc.RF <- caret::train(Label~.-Subject_spiral, data=df_nc, method="rf", metric="ROC"
+                          , trControl=train_control)
+unloadNamespace("RSNNS")
+
+nc.results <- resamples(list(LDA=nc.LDA, QDA=nc.QDA, LogReg=nc.glm, NB=nc.NB, SVM=nc.RSVM, KNN=nc.kNN, MLP=nc.MLP, RF=nc.RF))
+summary(nc.results)
+```
+```{r}
+# box and whisker plots to compare models
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(nc.results, scales=scales)
+
+# density plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+densityplot(nc.results, scales=scales, pch = "|")
+
+# dot plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+dotplot(nc.results, scales=scales)
+
+```
+
+```{r}
+# difference in model predictions
+diffs <- diff(nc.results)
+# summarize p-values for pair-wise comparisons
+summary(diffs)
+# plot of differences
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(diffs, scales=scales) # This is to plot the differences
+```
+
+
+
+
+
+```{r ALL MODELS, df_pca DATASET}
+# LDA
+pca.LDA <- caret::train(Label~.-Subject_spiral, data=df_pca, method="lda", metric="ROC"
+                 , trControl=train_control)
+# QDA
+pca.QDA <- caret::train(Label~.-Subject_spiral, data=df_pca, method="qda", metric="ROC"
+                 , trControl=train_control)
+# Logistic Regression
+pca.glm <- caret::train(Label~.-Subject_spiral, data=df_pca, method="glm", metric="ROC"
+                 , trControl=train_control)
+# kNN
+pca.kNN <- caret::train(Label~.-Subject_spiral, data=df_pca, method="knn", metric="ROC"
+                 , trControl=train_control)
+# Naive Bayes
+pca.NB <- caret::train(Label~.-Subject_spiral, data=df_pca, method="naive_bayes", metric="ROC"
+                 , trControl=train_control)
+# Radial SVM
+pca.RSVM <- caret::train(Label~.-Subject_spiral, data=df_pca, method="svmRadial", metric="ROC"
+                 , trControl=train_control)
+# Multilayer Perceptron
+library(RSNNS)
+pca.MLP <- caret::train(Label~.-Subject_spiral, data=df_pca, method="mlp", metric="ROC"
+                          , trControl=train_control)
+
+# Random Forest
+pca.RF <- caret::train(Label~.-Subject_spiral, data=df_pca, method="rf", metric="ROC"
+                          , trControl=train_control)
+unloadNamespace("RSNNS")
+
+pca.results <- resamples(list(LDA=pca.LDA, QDA=pca.QDA, LogReg=pca.glm, NB=pca.NB, SVM=pca.RSVM, KNN=pca.kNN, MLP=pca.MLP, RF=pca.RF))
+summary(pca.results)
+```
+```{r}
+# box and whisker plots to compare models
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(pca.results, scales=scales)
+
+# density plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+densityplot(pca.results, scales=scales, pch = "|")
+
+# dot plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+dotplot(pca.results, scales=scales)
+
+```
+
+```{r}
+# difference in model predictions
+diffs <- diff(pca.results)
+# summarize p-values for pair-wise comparisons
+summary(diffs)
+# plot of differences
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(diffs, scales=scales) # This is to plot the differences
+```
+
+
+
+
+
+```{r ALL MODELS, df_rfe DATASET}
+# LDA
+rfe.LDA <- caret::train(Label~.-Subject_spiral, data=df_nc, method="lda", metric="ROC"
+                 , trControl=train_control)
+# QDA
+rfe.QDA <- caret::train(Label~.-Subject_spiral, data=df_nc, method="qda", metric="ROC"
+                 , trControl=train_control)
+# Logistic Regression
+rfe.glm <- caret::train(Label~.-Subject_spiral, data=df_nc, method="glm", metric="ROC"
+                 , trControl=train_control)
+# kNN
+rfe.kNN <- caret::train(Label~.-Subject_spiral, data=df_nc, method="knn", metric="ROC"
+                 , trControl=train_control)
+# Naive Bayes
+rfe.NB <- caret::train(Label~.-Subject_spiral, data=df_nc, method="naive_bayes", metric="ROC"
+                 , trControl=train_control)
+# Radial SVM
+rfe.RSVM <- caret::train(Label~.-Subject_spiral, data=df_nc, method="svmRadial", metric="ROC"
+                 , trControl=train_control)
+# Multilayer Perceptron
+library(RSNNS)
+rfe.MLP <- caret::train(Label~.-Subject_spiral, data=df_nc, method="mlp", metric="ROC"
+                          , trControl=train_control)
+
+# Random Forest
+rfe.RF <- caret::train(Label~.-Subject_spiral, data=df_nc, method="rf", metric="ROC"
+                          , trControl=train_control)
+rfe.vRF <- predict(rfe.RF, )
+unloadNamespace("RSNNS")
+
+rfe.results <- resamples(list(LDA=rfe.LDA, QDA=rfe.QDA, LogReg=rfe.glm, NB=rfe.NB, SVM=rfe.RSVM, KNN=rfe.kNN, MLP=rfe.MLP, RF=rfe.RF))
+summary(rfe.results)
+```
+```{r}
+# box and whisker plots to compare models
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(rfe.results, scales=scales)
+
+# density plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+densityplot(rfe.results, scales=scales, pch = "|")
+
+# dot plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+dotplot(rfe.results, scales=scales)
+
+```
+
+```{r}
+# difference in model predictions
+diffs <- diff(rfe.results)
+# summarize p-values for pair-wise comparisons
+summary(diffs)
+# plot of differences
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+bwplot(diffs, scales=scales) # This is to plot the differences
+```
+
+
+
+Testing set performance:
+```{r}
+A <- test_perf(nc.RF, orig_ims, validation_idx)
+B <- test_perf(nc.glm, orig_ims, validation_idx)
+
+# C <- test_perf(pca.kNN, orig_ims, validation_idx)
+# D <- test_perf(pca.MLP, orig_ims, validation_idx)
+
+E <- test_perf(rfe.RF, orig_ims, validation_idx)
+F. <- test_perf(rfe.glm, orig_ims, validation_idx)
+```
+
+
+
+
+
+
+Hyperparameter tuning --> As a future line, commented in the report.
+
+Using the original only dataset --> As a future line, commented in the report. Maybe should have done it for this hand-in, to compare with the synthetically augmented one.
+
+Ensemble learning (boosting!)--> As a future line, commented in the report.
