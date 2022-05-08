@@ -6,7 +6,7 @@ end
 
 % Basically, watershed transform.
 thr = graythresh(img);
-Dist = bwdist(imclose(img<thr, strel('disk', 1)));
+Dist = -bwdist(imclose(img<thr, strel('disk', 1)));
 RegionMax = imregionalmax(Dist);
 [x, y] = find(RegionMax ~= 0);
 % imshow(Dist);

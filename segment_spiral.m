@@ -1,7 +1,7 @@
 function ROI = segment_spiral(img)
 %SEGMENT_SPIRAL Segments the spiral.
 if size(img, 1) > 500
-    im = imresize(img, 0.25); % Irudi sintetikoak resize!!!
+    im = imresize(img, [256 256]); % Irudi sintetikoak resize!!!
 end
 
 % Simple thresholding, non-uniform lighting was not found.

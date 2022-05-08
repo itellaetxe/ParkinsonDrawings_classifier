@@ -57,7 +57,7 @@ for img = 1:length(img_all_spiral)
     [df.mean_stroke_width(img), df.var_stroke_width(img)] =...
         measure_stroke_width(img_all_spiral{img});
     [df.HFP(img), df.FF(img), df.N_pruned_pixels(img), df.N_pixels_spiral(img)] = ...
-        spiral_transform(img_all_spiral{img}, 0);
+        spiral_transform(img_all_spiral{img}, 1);
 
     df.SH_m1(img) = compute_shape_moments(img_all_spiral{img}, 1);
     df.SH_m3(img) = compute_shape_moments(img_all_spiral{img}, 3);
