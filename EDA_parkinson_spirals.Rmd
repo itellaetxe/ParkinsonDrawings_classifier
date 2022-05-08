@@ -1,0 +1,147 @@
+---
+title: "Exploratory Data Analysis (EDA) on the Parkinson's drawings dataset"
+output: html_notebook
+---
+
+Authors: Imanol Isasa and Iñigo Tellaetxe
+
+In this notebook an EDA of the Parkinson Disease spiral drawings dataset has been performed. Initially 82 images were downloaded from the internet, but 30 samples more (15 PD and 15 healthy) were added by using a Parkinson emulating device.
+
+```{r}
+# Removal of the variables on the current workspace
+rm(list=ls())
+
+filename <- "./df_parkinson_spirals.csv"  # Path to file
+
+# Load the CSV file from the local directory
+df <- read.csv(filename, header=TRUE)
+df <- as.data.frame(df)
+```
+
+# Obtention of the variable names on the df
+
+```{r}
+names(df)
+```
+
+# Missingness map and initial df dimensions
+Results show an initial size of 112 samples X 13 variables for the df. No missing values were found, as it can be appreciated in the map below.
+
+```{r}
+summary(df)
+```
+
+```{r}
+library(Amelia)
+
+dim(df)
+sum(is.na(df))  # Sum of NaN values in df
+
+# Also graphically showing that there is not any missing value -> missingness map
+missmap(df, col=c("white", "black"), legend=TRUE)
+```
+
+# Looking for the actual variable type one by one
+Variable, such as Subject_spiral and Label, should be marked as factors. N_pixels_spiral and N_pruned_pixels will always contain integer values (as it is impossible a single pixel to be divided in two parts), so they will be treated as so. The rest of the variables are marked as numerics correctly.
+
+```{r}
+sapply(df, class)
+```
+```{r}
+df$Subject_spiral <- as.factor(df$Subject_spiral)
+df$Label <- as.factor(df$Label)
+
+# Checking again that the format modification was successful
+sapply(df, class)
+```
+
+# Checking if the Label variable is correctly balanced
+As it can be appreciated, the df is perfectly balanced with 56 samples of each PD and healthy patients.
+
+```{r}
+Label_distribution <- dplyr::count(df, Label, sort=TRUE)
+barplot(height=Label_distribution$n, names=c("Healthy", "Parkinson"), main="Class balance checking", xlab="Label", ylab="Counts")
+```
+# Checking the distribution of each variable using histograms and boxplots
+
+```{r}
+# Histograms for each numerical variable
+for (i in 2:12){
+  hist(df[,i], main=names(df)[i], xlab="Value")
+}
+
+# The other variables are plotted separately in order each scale to be as good as possible
+for (i in 2:12){
+  boxplot(df[,i], main=names(df)[i], xlab="Variable", ylab="Value")
+}
+```
+There is an algorithm that can be applied to obtain a numeric value for the degree of skewness of the variables.
+
+```{r}
+library(e1071)
+
+skew <- apply(Filter(is.numeric, df), 2, skewness)
+skew
+
+# Skewed to the left -> positive value
+# Skewed to the right -> negative value
+```
+
+# Detecting and deleting variables with near zero variance
+Variable delete_nearZero is empty, so all the variables vary in an acceptable manner.
+
+```{r}
+library(caret)
+
+# Column index returned because names=FALSE and saveMetrics=FALSE
+delete_nearZero <- nearZeroVar(df, saveMetrics=FALSE, names=FALSE) 
+df[,delete_nearZero] <- NULL # Deleting the variables that are not relevant
+
+delete_nearZero
+```
+
+# Checking if there are dubplicated samples
+There is no duplicated samples in the whole dataframe.
+
+```{r}
+dupl_check <- duplicated(df)
+length(dupl_check[dupl_check==TRUE])
+```
+
+# Checking if the numeric variables are related between them
+
+```{r}
+library(corrplot)
+
+# Just performing the correlation plot for those variables that are numeric-type
+corr_mat <- cor(Filter(is.numeric, df))
+corrplot(corr_mat, method='circle', outline =TRUE, type='upper', title="Correlation plot")
+```
+
+The algorithm in R suggest that among Mean_spiral and N_pixels_spiral one should be removed. Also, another one should be removed among SH_m3 and SH_m4. The second correlated pair was expected, but the first one was not.
+
+```{r}
+library(caret)
+
+# Variables that are correlated in more than a 90% are identified
+suggestion_delete <- findCorrelation(corr_mat, cutoff=0.9, verbose=TRUE)
+```
+
+```{r}
+library(GGally)
+
+ggpairs(df[,c(suggestion_delete, 13)], mapping=aes(colour=Label))
+```
+
+# Exporting the dataset again in case any modification was performed
+
+```{r}
+write.csv(df, file="EDA_out_parkinson.csv", row.names=FALSE)
+```
+ 
+# Visualization of the exported dataset
+
+```{r}
+head(df)
+```
+
