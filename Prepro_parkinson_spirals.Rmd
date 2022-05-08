@@ -1,0 +1,104 @@
+---
+title: "Exploratory Data Analysis (EDA) on the Parkinson's drawings dataset"
+output: html_notebook
+---
+
+Authors: Imanol Isasa and Iñigo Tellaetxe
+
+In this notebook 3 different approaches for the PD patient drawing image dataset preprocessing have been built: PCA, RFE, and correlation-based.
+
+```{r}
+rm(list=ls())
+
+# First the output from the EDA is loaded.
+filename <- "EDA_out_parkinson.csv"
+df <- read.csv(filename, header=TRUE)
+
+```
+
+# Manual variable selection
+
+As it was calculated in the EDA notebook, there exists a high correlation (>.9) between SH_m3 and SH_m4. Therefore variable SH_m4 was deleted manually in order to manually delete repetitive information.
+
+Also, having looked at the distributions in the EDA notebook, something strange appeared in the Mean_spiral variable: a quite sharp bimodal distribution. After having looked to the images, we realised that this variable was distorted due to the synthetic images we incorporated. As in the EDA this variable appeared to be also highly correlated to the N_pixels_spiral, it was decided to delete the Mean_spiral variable.
+
+```{r}
+# A copy of the original df is generated just in case
+df_nocorr <- df
+df_nocorr$SH_m4 <- NULL
+df_nocorr$Mean_spiral <- NULL
+```
+
+# RFE variable selection
+
+```{r}
+library(caret)
+
+set.seed(7)
+# define the control using a random forest selection function
+control <- rfeControl(functions=treebagFuncs, method="cv", number=10)
+# run the RFE algorithm
+x <- df[,2:12] # Caution here, we don't want to introduce the label as a predictor
+y <- df$Label
+sizes <- c(2:12)
+results <- rfe(x, y, sizes=sizes, rfeControl=control)
+# summarize the results
+print(results)
+# list the chosen features
+predictors(results)
+# plot accuracy versus the number of features
+plot(results, type=c("g", "o"))
+
+```
+```{r}
+df_RFE <- df[,c(5, 4, 9, 6, 10)]
+
+# Categorical variables are added to the new dataset
+df_RFE$Label <- df$Label
+df_RFE$Subject_spiral <- df$Subject_spiral
+df_RFE
+```
+
+# PCA implementation
+
+```{r}
+factors <- c("Subject_spiral", "Label")
+numeric_df <- df
+numeric_df[factors] <- NULL # Take categorical variables out from the df
+pr.out <- prcomp(numeric_df, scale=TRUE)
+
+# PC visualization
+pr.out
+biplot(pr.out, scale=0)
+```
+
+```{R}
+# Now checking how many PCs are necessary to represent a 95 % of the original df
+pr.var <- pr.out$sdev ^ 2
+pve <- pr.var / sum(pr.var)
+
+par(mfrow=c(1, 2))
+barplot(pve, xlab='Principal Component', ylab='Proportion of Variance Explained', ylim=c(0,1))
+plot(cumsum(pve), xlab='Principal Component', ylab='Cumuative Proportion of Variance Explained', ylim=c(0, 1))
+
+cumsum(pve)
+```
+
+```{R}
+df_PCA <- as.data.frame(pr.out$x)[,1:8] # Take only the first 8 PCs
+
+# Adding the categorical variables to the new dataframe again
+df_PCA$Subject_spiral <- df$Subject_spiral
+df_PCA$Label <- df$Label
+```
+
+# Saving the preprocessed dfs
+
+```{R}
+write.csv(df_RFE, file="prepro_df_RFE.csv", row.names=FALSE)
+write.csv(df_nocorr, file="prepro_df_nocorr.csv", row.names=FALSE)
+write.csv(df_PCA, file="prepro_df_PCA.csv", row.names=FALSE)
+```
+
+
+
